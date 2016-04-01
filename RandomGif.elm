@@ -2,8 +2,8 @@ module RandomGif (..) where
 
 import Effects exposing (Effects, Never)
 import Html exposing (..)
-import Html.Attributes exposing (style)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (style, value)
+import Html.Events exposing (on, onClick, onKeyDown, targetValue)
 import Http
 import Json.Decode as Json
 import Task
@@ -12,6 +12,7 @@ import Task
 -- CONFIG
 
 
+loadingImg : String
 loadingImg =
   "assets/waiting.gif"
 
@@ -40,6 +41,8 @@ init topic =
 type Action
   = RequestMore
   | NewGif (Maybe String)
+  | Type String
+  | NoOp
 
 
 update : Action -> Model -> ( Model, Effects Action )
@@ -59,11 +62,22 @@ update msg model =
       , Effects.none
       )
 
+    Type input ->
+      ( { model
+          | topic = input
+        }
+      , Effects.none
+      )
+
+    NoOp ->
+      ( model, Effects.none )
+
 
 
 -- VIEW
 
 
+(=>) : a -> b -> ( a, b )
 (=>) =
   (,)
 
@@ -71,10 +85,30 @@ update msg model =
 view : Signal.Address Action -> Model -> Html
 view address model =
   div
-    [ style [ "width" => "200px" ] ]
+    [ wrapperStyle ]
     [ h2 [ headerStyle ] [ text model.topic ]
+    , input
+        [ style [ "padding" => "10px" ]
+        , value model.topic
+        , onInput address Type
+        , onKeyDown address keyToActions
+        ]
+        []
     , div [ imgStyle model.gifUrl ] []
     , button [ onClick address RequestMore ] [ text "More Please!" ]
+    ]
+
+
+wrapperStyle : Attribute
+wrapperStyle =
+  style
+    [ "width" => "200px"
+    , "display" => "flex"
+    , "margin" => "10px auto"
+    , "text-align" => "center"
+    , "flex-direction" => "column"
+    , "justify-content" => "space-around"
+    , "height" => "400px"
     ]
 
 
@@ -93,7 +127,8 @@ imgStyle url =
     , "width" => "200px"
     , "height" => "200px"
     , "background-position" => "center"
-    , "background-size" => "cover"
+    , "background-size" => "contain"
+    , "background-repeat" => "no-repeat"
     , "background-image" => ("url('" ++ url ++ "')")
     ]
 
@@ -122,3 +157,27 @@ randomUrl topic =
 decodeUrl : Json.Decoder String
 decodeUrl =
   Json.at [ "data", "image_url" ] Json.string
+
+
+
+-- EVENTS
+
+
+keyToActions : Int -> Action
+keyToActions key =
+  case key of
+    13 ->
+      RequestMore
+
+    _ ->
+      NoOp
+
+
+onInput : Signal.Address a -> (String -> a) -> Attribute
+onInput address toAddressValue =
+  on
+    "input"
+    targetValue
+    (\str ->
+      Signal.message address <| toAddressValue str
+    )
