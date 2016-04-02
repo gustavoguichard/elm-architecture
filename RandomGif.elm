@@ -2,8 +2,8 @@ module RandomGif (..) where
 
 import Effects exposing (Effects, Never)
 import Html exposing (..)
-import Html.Attributes exposing (style, value)
-import Html.Events exposing (on, onClick, onKeyDown, targetValue)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Http
 import Json.Decode as Json
 import Task
@@ -42,7 +42,6 @@ type Action
   = RequestMore
   | NewGif (Maybe String)
   | Type String
-  | NoOp
 
 
 update : Action -> Model -> ( Model, Effects Action )
@@ -69,9 +68,6 @@ update msg model =
       , Effects.none
       )
 
-    NoOp ->
-      ( model, Effects.none )
-
 
 
 -- VIEW
@@ -90,8 +86,8 @@ view address model =
     , input
         [ style [ "padding" => "10px" ]
         , value model.topic
-        , onInput address Type
-        , onKeyDown address keyToActions
+        , on "input" targetValue (Signal.message address << Type)
+        , onEnter address RequestMore
         ]
         []
     , div [ imgStyle model.gifUrl ] []
@@ -163,21 +159,17 @@ decodeUrl =
 -- EVENTS
 
 
-keyToActions : Int -> Action
-keyToActions key =
-  case key of
-    13 ->
-      RequestMore
-
-    _ ->
-      NoOp
-
-
-onInput : Signal.Address a -> (String -> a) -> Attribute
-onInput address toAddressValue =
+onEnter : Signal.Address a -> a -> Attribute
+onEnter address value =
   on
-    "input"
-    targetValue
-    (\str ->
-      Signal.message address <| toAddressValue str
-    )
+    "keydown"
+    (Json.customDecoder keyCode is13)
+    (\_ -> Signal.message address value)
+
+
+is13 : Int -> Result String ()
+is13 code =
+  if code == 13 then
+    Ok ()
+  else
+    Err "not the right key code"
