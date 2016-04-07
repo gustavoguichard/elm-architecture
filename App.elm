@@ -1,4 +1,4 @@
-module MyApp (..) where
+module App (..) where
 
 import Effects exposing (Effects, Never)
 import Html exposing (..)
@@ -57,10 +57,10 @@ update action model =
 
     WindowEvents window mouse ->
       let
-        bg =
+        background =
           Background.update (Background.Change window mouse) model.background
       in
-        ( { model | background = bg }
+        ( { model | background = background }
         , Effects.none
         )
 
@@ -85,8 +85,5 @@ view address model =
             , ( "pointer-events", "none" )
             ]
         ]
-        [ Background.view
-            (Signal.forwardTo address (always NoOp))
-            model.background
-        ]
+        [ Background.view model.background ]
     ]

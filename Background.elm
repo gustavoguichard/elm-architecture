@@ -49,8 +49,8 @@ drawCircle x y =
     |> move ( x, y )
 
 
-view : Signal.Address Action -> Model -> Html
-view _ { mouse, window } =
+view : Model -> Html
+view { mouse, window } =
   let
     ( w, h ) =
       window

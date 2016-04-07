@@ -1,15 +1,15 @@
 module Main (..) where
 
 import Effects exposing (Never)
-import MyApp exposing (init, update, view)
+import App exposing (init, update, view, Model, Action)
 import StartApp
 import Task
 import Html
-import Mouse
-import Window
+import Mouse as M
+import Window as W
 
 
-app : StartApp.App MyApp.Model
+app : StartApp.App Model
 app =
   StartApp.start
     { init = init
@@ -19,14 +19,9 @@ app =
     }
 
 
-inputs : Signal MyApp.Action
+inputs : Signal Action
 inputs =
-  Signal.map2 signalActions Window.dimensions Mouse.position
-
-
-signalActions : ( Int, Int ) -> ( Int, Int ) -> MyApp.Action
-signalActions window mouse =
-  MyApp.WindowEvents window mouse
+  Signal.map2 App.WindowEvents W.dimensions M.position
 
 
 main : Signal Html.Html
