@@ -106,6 +106,7 @@ view model =
         , onEnter NoOp Create
         , onInput Topic
         , inputStyle
+        , autofocus True
         ]
         []
     , div

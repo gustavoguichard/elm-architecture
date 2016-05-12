@@ -21,22 +21,25 @@ type alias Model =
 
 init : Model
 init =
-  Model ( 0, 0 ) ( 0, 0 )
-
+  Model (0, 0) (0, 0)
 
 
 -- UPDATE
 
 
 type Msg
-  = Change Vect Vect
+  = Resize Vect
+  | Move Vect
 
 
 update : Msg -> Model -> Model
 update msg model =
   case msg of
-    Change window mouse ->
-      Model window mouse
+    Resize window ->
+      Model window model.mouse
+
+    Move mouse ->
+      Model model.window mouse
 
 
 

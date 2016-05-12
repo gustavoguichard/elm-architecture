@@ -1,16 +1,16 @@
-module Main exposing (..)
+--module Main exposing (..)
 
 import App exposing (init, update, view, Model, Msg)
 import Html.App as App
 import Task
 import Html
-import Mouse as M
-import Window as W
+import Mouse exposing (moves)
+import Window exposing (resizes)
 
 
-subscriptions : Sub a
-subscriptions =
-  Sub.batch [ W.resizes, M.moves ]
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+  Sub.batch [ resizes App.WindowResize, moves App.MouseMove ]
 
 
 main : Program Never
@@ -19,5 +19,5 @@ main =
     { init = init
     , update = update
     , view = view
-    , subscriptions = \_ -> Sub.none
+    , subscriptions = subscriptions
     }

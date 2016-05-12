@@ -17,6 +17,11 @@ main =
 type alias Model =
   Int
 
+type alias Context m =
+  { msgs : Msg -> m
+  , remove : m
+  }
+
 
 init : Int -> Model
 init n =
@@ -48,11 +53,12 @@ view model =
     ]
 
 
+viewWithRemoveButton : Context m -> Model -> Html m
 viewWithRemoveButton context model =
   div
     []
-    [ button [ onClick (context.actions Decrement) ] [ text "-" ]
+    [ button [ onClick (context.msgs Decrement) ] [ text "-" ]
     , span [] [ text (toString model) ]
-    , button [ onClick (context.actions Increment) ] [ text "+" ]
+    , button [ onClick (context.msgs Increment) ] [ text "+" ]
     , button [ onClick context.remove ] [ text "X" ]
     ]

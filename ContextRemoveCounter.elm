@@ -78,9 +78,6 @@ view model =
 viewCounter : ( ID, Counter.Model ) -> Html Msg
 viewCounter ( id, model ) =
   let
-    context =
-      { actions = Modify id
-      , remove = Remove id
-      }
+    context = Counter.Context (Modify id) (Remove id)
   in
     Counter.viewWithRemoveButton context model

@@ -2,9 +2,12 @@ module App exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.App exposing (map)
+import Html.App as App
+import Task
+import Mouse exposing (Position)
+import Window exposing (Size)
 import DynamicGifs
-import Background
+import Background as Bg
 
 
 -- MODEL
@@ -16,7 +19,7 @@ type alias Vect =
 
 type alias Model =
   { gifs : DynamicGifs.Model
-  , background : Background.Model
+  , background : Bg.Model
   }
 
 
@@ -26,7 +29,10 @@ init =
     ( gifsModel, fx ) =
       DynamicGifs.init ""
   in
-    Model gifsModel Background.init ! [ Cmd.map Gifs fx ]
+    Model gifsModel Bg.init
+    ! [ Cmd.map Gifs fx
+      , Task.perform EventFail WindowResize Window.size
+      ]
 
 
 -- UPDATE
@@ -34,7 +40,10 @@ init =
 
 type Msg
   = Gifs DynamicGifs.Msg
-  | WindowEvents Vect Vect
+  | StartResize Bg.Msg
+  | MouseMove Position
+  | WindowResize Size
+  | EventFail String
   | NoOp
 
 
@@ -43,19 +52,26 @@ update message model =
   case message of
     Gifs msg ->
       let
-        ( gifs, fx ) =
-          DynamicGifs.update msg model.gifs
+        ( gifs, fx ) = DynamicGifs.update msg model.gifs
       in
         { model | gifs = gifs } ! [ Cmd.map Gifs fx ]
 
-    WindowEvents window mouse ->
+    WindowResize size ->
       let
-        background =
-          Background.update (Background.Change window mouse) model.background
+        window = ( size.width, size.height )
+        bg = Bg.update (Bg.Resize window) model.background
+        background = { window = bg.window, mouse = (((fst bg.window) // 2), ((snd bg.window) // 2)) }
       in
         { model | background = background } ! []
 
-    NoOp ->
+    MouseMove xy ->
+      let
+        mouse = ( xy.x, xy.y )
+        bg = Bg.update (Bg.Move mouse) model.background
+      in
+        { model | background = bg } ! []
+
+    _ ->
       model ! []
 
 
@@ -67,7 +83,7 @@ view : Model -> Html Msg
 view model =
   div
     []
-    [ map Gifs (DynamicGifs.view model.gifs)
+    [ App.map Gifs (DynamicGifs.view model.gifs)
     , div
         [ style
             [ ( "position", "absolute" )
@@ -76,5 +92,5 @@ view model =
             , ( "pointer-events", "none" )
             ]
         ]
-        [ map (always NoOp) (Background.view model.background) ]
+        [ App.map (always NoOp) (Bg.view model.background) ]
     ]
