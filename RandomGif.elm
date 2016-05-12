@@ -1,12 +1,20 @@
-module RandomGif (..) where
+module RandomGif exposing (..)
 
-import Effects exposing (Effects, Never)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Html.App as App
 import Http
 import Json.Decode as Json
 import Task
+
+main =
+  App.program
+    { init = init "surf"
+    , update = update
+    , view = view
+    , subscriptions = \_ -> Sub.none
+    }
 
 
 -- CONFIG
@@ -27,7 +35,7 @@ type alias Model =
   }
 
 
-init : String -> ( Model, Effects Action )
+init : String -> ( Model, Cmd Msg )
 init topic =
   ( Model topic loadingImg
   , getRandomGif topic
@@ -38,35 +46,32 @@ init topic =
 -- UPDATE
 
 
-type Action
-  = RequestMore
-  | NewGif (Maybe String)
+type Msg
+  = NoOp
+  | RequestMore
+  | FetchSuccess String
+  | FetchFail Http.Error
   | Type String
 
 
-update : Action -> Model -> ( Model, Effects Action )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
     RequestMore ->
-      ( { model
-          | gifUrl = loadingImg
-        }
-      , getRandomGif model.topic
-      )
+      { model
+        | gifUrl = loadingImg
+      } ! [ getRandomGif model.topic ]
 
-    NewGif maybeUrl ->
-      ( { model
-          | gifUrl = Maybe.withDefault model.gifUrl maybeUrl
-        }
-      , Effects.none
-      )
+    FetchSuccess url ->
+      { model | gifUrl = url } ! []
 
     Type input ->
-      ( { model
-          | topic = input
-        }
-      , Effects.none
-      )
+      { model
+        | topic = input
+      } ! []
+
+    _ ->
+      model ! []
 
 
 
@@ -78,24 +83,24 @@ update msg model =
   (,)
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   div
     [ wrapperStyle ]
     [ h2 [ headerStyle ] [ text model.topic ]
     , input
         [ style [ "padding" => "10px" ]
         , value model.topic
-        , on "input" targetValue (Signal.message address << Type)
-        , onEnter address RequestMore
+        , onInput Type
+        , onEnter NoOp RequestMore
         ]
         []
     , div [ imgStyle model.gifUrl ] []
-    , button [ onClick address RequestMore ] [ text "More Please!" ]
+    , button [ onClick RequestMore ] [ text "More Please!" ]
     ]
 
 
-wrapperStyle : Attribute
+wrapperStyle : Attribute msg
 wrapperStyle =
   style
     [ "width" => "200px"
@@ -108,7 +113,7 @@ wrapperStyle =
     ]
 
 
-headerStyle : Attribute
+headerStyle : Attribute msg
 headerStyle =
   style
     [ "width" => "200px"
@@ -116,7 +121,7 @@ headerStyle =
     ]
 
 
-imgStyle : String -> Attribute
+imgStyle : String -> Attribute msg
 imgStyle url =
   style
     [ "display" => "inline-block"
@@ -133,12 +138,10 @@ imgStyle url =
 -- EFFECTS
 
 
-getRandomGif : String -> Effects Action
+getRandomGif : String -> Cmd Msg
 getRandomGif topic =
   Http.get decodeUrl (randomUrl topic)
-    |> Task.toMaybe
-    |> Task.map NewGif
-    |> Effects.task
+    |> Task.perform FetchFail FetchSuccess
 
 
 randomUrl : String -> String
@@ -159,17 +162,11 @@ decodeUrl =
 -- EVENTS
 
 
-onEnter : Signal.Address a -> a -> Attribute
-onEnter address value =
-  on
-    "keydown"
-    (Json.customDecoder keyCode is13)
-    (\_ -> Signal.message address value)
-
-
-is13 : Int -> Result String ()
-is13 code =
-  if code == 13 then
-    Ok ()
-  else
-    Err "not the right key code"
+onEnter : msg -> msg -> Attribute msg
+onEnter fail success =
+  let
+    tagger code =
+      if code == 13 then success
+      else fail
+  in
+    on "keyup" (Json.map tagger keyCode)

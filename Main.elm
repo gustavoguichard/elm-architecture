@@ -1,34 +1,23 @@
-module Main (..) where
+module Main exposing (..)
 
-import Effects exposing (Never)
-import App exposing (init, update, view, Model, Action)
-import StartApp
+import App exposing (init, update, view, Model, Msg)
+import Html.App as App
 import Task
 import Html
 import Mouse as M
 import Window as W
 
 
-app : StartApp.App Model
-app =
-  StartApp.start
+subscriptions : Sub a
+subscriptions =
+  Sub.batch [ W.resizes, M.moves ]
+
+
+main : Program Never
+main =
+  App.program
     { init = init
     , update = update
     , view = view
-    , inputs = [ inputs ]
+    , subscriptions = \_ -> Sub.none
     }
-
-
-inputs : Signal Action
-inputs =
-  Signal.map2 App.WindowEvents W.dimensions M.position
-
-
-main : Signal Html.Html
-main =
-  app.html
-
-
-port tasks : Signal (Task.Task Never ())
-port tasks =
-  app.tasks

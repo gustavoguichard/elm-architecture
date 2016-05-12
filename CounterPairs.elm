@@ -1,13 +1,13 @@
-module CounterPairs (..) where
+module CounterPairs exposing (..)
 
 import Counter
 import Html exposing (..)
 import Html.Events exposing (..)
-import StartApp.Simple exposing (start)
+import Html.App exposing (beginnerProgram, map)
 
 
 main =
-  start
+  beginnerProgram
     { model = init 0 0
     , update = update
     , view = view
@@ -20,10 +20,10 @@ type alias Model =
   }
 
 
-type Action
+type Msg
   = Reset
-  | Top Counter.Action
-  | Bottom Counter.Action
+  | Top Counter.Msg
+  | Bottom Counter.Msg
 
 
 init : Int -> Int -> Model
@@ -31,9 +31,9 @@ init top bottom =
   Model (Counter.init top) (Counter.init bottom)
 
 
-update : Action -> Model -> Model
-update action model =
-  case action of
+update : Msg -> Model -> Model
+update msg model =
+  case msg of
     Reset ->
       init 0 0
 
@@ -48,11 +48,11 @@ update action model =
       }
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   div
     []
-    [ Counter.view (Signal.forwardTo address Top) model.topCounter
-    , Counter.view (Signal.forwardTo address Bottom) model.bottomCounter
-    , button [ onClick address Reset ] [ text "Reset" ]
+    [ map Top (Counter.view model.topCounter)
+    , map Bottom (Counter.view model.bottomCounter)
+    , button [ onClick Reset ] [ text "Reset" ]
     ]

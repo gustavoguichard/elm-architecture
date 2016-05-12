@@ -1,13 +1,13 @@
-module DynamicCounters (..) where
+module DynamicCounters exposing (..)
 
 import Counter
 import Html exposing (..)
 import Html.Events exposing (..)
-import StartApp.Simple exposing (start)
+import Html.App exposing (beginnerProgram, map)
 
 
 main =
-  start
+  beginnerProgram
     { model = init
     , update = update
     , view = view
@@ -24,10 +24,10 @@ type alias ID =
   Int
 
 
-type Action
+type Msg
   = Insert
   | Remove
-  | Modify ID Counter.Action
+  | Modify ID Counter.Msg
 
 
 init : Model
@@ -37,9 +37,9 @@ init =
   }
 
 
-update : Action -> Model -> Model
-update action model =
-  case action of
+update : Msg -> Model -> Model
+update msg model =
+  case msg of
     Insert ->
       let
         newCounter =
@@ -64,21 +64,21 @@ update action model =
         { model | counters = List.map updateCounter model.counters }
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   let
     counters =
-      List.map (viewCounter address) model.counters
+      List.map viewCounter model.counters
   in
     div
       []
-      ([ button [ onClick address Remove ] [ text "Remove" ]
-       , button [ onClick address Insert ] [ text "Add" ]
+      ([ button [ onClick Remove ] [ text "Remove" ]
+       , button [ onClick Insert ] [ text "Add" ]
        ]
         ++ counters
       )
 
 
-viewCounter : Signal.Address Action -> ( ID, Counter.Model ) -> Html
-viewCounter address ( id, model ) =
-  Counter.view (Signal.forwardTo address (Modify id)) model
+viewCounter : ( ID, Counter.Model ) -> Html Msg
+viewCounter ( id, model ) =
+  map (Modify id) (Counter.view model)

@@ -1,13 +1,13 @@
-module ContextRemoveCounter (..) where
+module ContextRemoveCounter exposing (..)
 
 import Counter
 import Html exposing (..)
 import Html.Events exposing (..)
-import StartApp.Simple exposing (start)
+import Html.App exposing (beginnerProgram, map)
 
 
 main =
-  start
+  beginnerProgram
     { model = init
     , update = update
     , view = view
@@ -24,10 +24,10 @@ type alias ID =
   Int
 
 
-type Action
+type Msg
   = Insert
   | Remove ID
-  | Modify ID Counter.Action
+  | Modify ID Counter.Msg
 
 
 init : Model
@@ -37,7 +37,7 @@ init =
   }
 
 
-update : Action -> Model -> Model
+update : Msg -> Model -> Model
 update action model =
   case action of
     Insert ->
@@ -64,23 +64,23 @@ update action model =
         { model | counters = List.map updateCounter model.counters }
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   let
     insert =
-      button [ onClick address Insert ] [ text "Add" ]
+      button [ onClick Insert ] [ text "Add" ]
   in
     div
       []
-      (insert :: List.map (viewCounter address) model.counters)
+      (insert :: List.map viewCounter model.counters)
 
 
-viewCounter : Signal.Address Action -> ( ID, Counter.Model ) -> Html
-viewCounter address ( id, model ) =
+viewCounter : ( ID, Counter.Model ) -> Html Msg
+viewCounter ( id, model ) =
   let
     context =
-      { actions = Signal.forwardTo address (Modify id)
-      , remove = Signal.forwardTo address (always (Remove id))
+      { actions = Modify id
+      , remove = Remove id
       }
   in
     Counter.viewWithRemoveButton context model

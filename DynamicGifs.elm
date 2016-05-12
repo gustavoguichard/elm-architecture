@@ -1,11 +1,20 @@
-module DynamicGifs (..) where
+module DynamicGifs exposing (..)
 
-import Effects exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Html.App as App
 import Json.Decode as Json
 import RandomGif
+
+
+main =
+  App.program
+    { init = init "surf"
+    , update = update
+    , view = view
+    , subscriptions = \_ -> Sub.none
+    }
 
 
 -- MODEL
@@ -22,30 +31,27 @@ type alias Model =
   }
 
 
-init : String -> ( Model, Effects Action )
+init : String -> ( Model, Cmd Msg )
 init topic =
-  ( Model topic [] 0
-  , Effects.none
-  )
+  Model topic [] 0 ! []
 
 
 
 -- UPDATE
 
 
-type Action
-  = Topic String
+type Msg
+  = NoOp
+  | Topic String
   | Create
-  | SubMsg Int RandomGif.Action
+  | SubMsg Int RandomGif.Msg
 
 
-update : Action -> Model -> ( Model, Effects Action )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
   case message of
     Topic topic ->
-      ( { model | topic = topic }
-      , Effects.none
-      )
+      { model | topic = topic } ! []
 
     Create ->
       let
@@ -55,9 +61,7 @@ update message model =
         newModel =
           Model "" (model.gifList ++ [ ( model.uid, newRandomGif ) ]) (model.uid + 1)
       in
-        ( newModel
-        , Effects.map (SubMsg model.uid) fx
-        )
+        newModel ! [ Cmd.map (SubMsg model.uid) fx ]
 
     SubMsg msgId msg ->
       let
@@ -67,22 +71,20 @@ update message model =
               ( newRandomGif, fx ) =
                 RandomGif.update msg randomGif
             in
-              ( ( id, newRandomGif )
-              , Effects.map (SubMsg id) fx
-              )
+              ( id, newRandomGif ) ! [ Cmd.map (SubMsg id) fx ]
           else
-            ( entry, Effects.none )
+            entry ! []
 
         ( newGifList, fxList ) =
           model.gifList
             |> List.map subUpdate
             |> List.unzip
       in
-        ( { model
-            | gifList = newGifList
-          }
-        , Effects.batch fxList
-        )
+        { model
+          | gifList = newGifList
+        } ! fxList
+
+    _ -> model ! []
 
 
 
@@ -94,30 +96,30 @@ update message model =
   (,)
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   div
     []
     [ input
         [ placeholder "What kind of gifs do you want?"
         , value model.topic
-        , onEnter address Create
-        , on "input" targetValue (Signal.message address << Topic)
+        , onEnter NoOp Create
+        , onInput Topic
         , inputStyle
         ]
         []
     , div
         [ style [ "display" => "flex", "flex-wrap" => "wrap" ] ]
-        (List.map (elementView address) model.gifList)
+        (List.map elementView model.gifList)
     ]
 
 
-elementView : Signal.Address Action -> ( Int, RandomGif.Model ) -> Html
-elementView address ( id, model ) =
-  RandomGif.view (Signal.forwardTo address (SubMsg id)) model
+elementView : ( Int, RandomGif.Model ) -> Html Msg
+elementView ( id, model ) =
+  App.map (SubMsg id) (RandomGif.view model)
 
 
-inputStyle : Attribute
+inputStyle : Attribute msg
 inputStyle =
   style
     [ "width" => "100%"
@@ -132,17 +134,11 @@ inputStyle =
 -- EVENTS
 
 
-onEnter : Signal.Address a -> a -> Attribute
-onEnter address value =
-  on
-    "keydown"
-    (Json.customDecoder keyCode is13)
-    (\_ -> Signal.message address value)
-
-
-is13 : Int -> Result String ()
-is13 code =
-  if code == 13 then
-    Ok ()
-  else
-    Err "not the right key code"
+onEnter : msg -> msg -> Attribute msg
+onEnter fail success =
+  let
+    tagger code =
+      if code == 13 then success
+      else fail
+  in
+    on "keyup" (Json.map tagger keyCode)

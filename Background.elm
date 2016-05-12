@@ -1,6 +1,7 @@
-module Background (..) where
+module Background exposing (..)
 
-import Graphics.Collage exposing (..)
+import Collage exposing (..)
+import Element exposing (toHtml)
 import Color exposing (..)
 import Html exposing (..)
 
@@ -27,13 +28,13 @@ init =
 -- UPDATE
 
 
-type Action
+type Msg
   = Change Vect Vect
 
 
-update : Action -> Model -> Model
-update action model =
-  case action of
+update : Msg -> Model -> Model
+update msg model =
+  case msg of
     Change window mouse ->
       Model window mouse
 
@@ -49,7 +50,7 @@ drawCircle x y =
     |> move ( x, y )
 
 
-view : Model -> Html
+view : Model -> Html Msg
 view { mouse, window } =
   let
     ( w, h ) =
@@ -65,4 +66,4 @@ view { mouse, window } =
       (h' / 2) - toFloat (snd mouse)
   in
     collage w h [ drawCircle x y ]
-      |> fromElement
+      |> toHtml

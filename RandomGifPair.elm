@@ -1,9 +1,18 @@
-module RandomGifPair (..) where
+module RandomGifPair exposing (..)
 
-import Effects exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.App as App
 import RandomGif
+
+
+main =
+  App.program
+    { init = init "surf" "cats"
+    , update = update
+    , view = view
+    , subscriptions = \_ -> Sub.none
+    }
 
 
 -- MODEL
@@ -15,7 +24,7 @@ type alias Model =
   }
 
 
-init : String -> String -> ( Model, Effects Action )
+init : String -> String -> ( Model, Cmd Msg )
 init leftTopic rightTopic =
   let
     ( left, leftFx ) =
@@ -24,44 +33,36 @@ init leftTopic rightTopic =
     ( right, rightFx ) =
       RandomGif.init rightTopic
   in
-    ( Model left right
-    , Effects.batch
-        [ Effects.map Left leftFx
-        , Effects.map Right rightFx
+    Model left right
+      ! [ Cmd.map Left leftFx
+        , Cmd.map Right rightFx
         ]
-    )
-
 
 
 -- UPDATE
 
 
-type Action
-  = Left RandomGif.Action
-  | Right RandomGif.Action
+type Msg
+  = Left RandomGif.Msg
+  | Right RandomGif.Msg
 
 
-update : Action -> Model -> ( Model, Effects Action )
-update action model =
-  case action of
-    Left act ->
+update : Msg -> Model -> ( Model, Cmd Msg )
+update message model =
+  case message of
+    Left msg ->
       let
         ( left, fx ) =
-          RandomGif.update act model.left
+          RandomGif.update msg model.left
       in
-        ( Model left model.right
-        , Effects.map Left fx
-        )
+        Model left model.right ! [ Cmd.map Left fx ]
 
-    Right act ->
+    Right msg ->
       let
         ( right, fx ) =
-          RandomGif.update act model.right
+          RandomGif.update msg model.right
       in
-        ( Model model.left right
-        , Effects.map Right fx
-        )
-
+        Model model.left right ! [ Cmd.map Right fx ]
 
 
 -- VIEW
@@ -72,10 +73,10 @@ update action model =
   (,)
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   div
     [ style [ "display" => "flex" ] ]
-    [ RandomGif.view (Signal.forwardTo address Left) model.left
-    , RandomGif.view (Signal.forwardTo address Right) model.right
+    [ App.map Left (RandomGif.view model.left)
+    , App.map Right (RandomGif.view model.right)
     ]

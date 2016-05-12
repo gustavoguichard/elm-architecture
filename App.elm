@@ -1,8 +1,8 @@
-module App (..) where
+module App exposing (..)
 
-import Effects exposing (Effects, Never)
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.App exposing (map)
 import DynamicGifs
 import Background
 
@@ -20,63 +20,54 @@ type alias Model =
   }
 
 
-init : ( Model, Effects Action )
+init : ( Model, Cmd Msg )
 init =
   let
     ( gifsModel, fx ) =
       DynamicGifs.init ""
   in
-    ( Model gifsModel Background.init
-    , Effects.batch
-        [ Effects.map Gifs fx
-        ]
-    )
-
+    Model gifsModel Background.init ! [ Cmd.map Gifs fx ]
 
 
 -- UPDATE
 
 
-type Action
-  = Gifs DynamicGifs.Action
+type Msg
+  = Gifs DynamicGifs.Msg
   | WindowEvents Vect Vect
   | NoOp
 
 
-update : Action -> Model -> ( Model, Effects Action )
-update action model =
-  case action of
-    Gifs act ->
+update : Msg -> Model -> ( Model, Cmd Msg )
+update message model =
+  case message of
+    Gifs msg ->
       let
         ( gifs, fx ) =
-          DynamicGifs.update act model.gifs
+          DynamicGifs.update msg model.gifs
       in
-        ( { model | gifs = gifs }
-        , Effects.map Gifs fx
-        )
+        { model | gifs = gifs } ! [ Cmd.map Gifs fx ]
 
     WindowEvents window mouse ->
       let
         background =
           Background.update (Background.Change window mouse) model.background
       in
-        ( { model | background = background }
-        , Effects.none
-        )
+        { model | background = background } ! []
 
     NoOp ->
-      ( model, Effects.none )
+      model ! []
 
 
 
 -- VIEW
 
 
-view : Signal.Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   div
     []
-    [ DynamicGifs.view (Signal.forwardTo address Gifs) model.gifs
+    [ map Gifs (DynamicGifs.view model.gifs)
     , div
         [ style
             [ ( "position", "absolute" )
@@ -85,5 +76,5 @@ view address model =
             , ( "pointer-events", "none" )
             ]
         ]
-        [ Background.view model.background ]
+        [ map (always NoOp) (Background.view model.background) ]
     ]
