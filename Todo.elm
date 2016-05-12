@@ -1,9 +1,9 @@
-module Todo (..) where
+module Todo exposing (..)
 
 import Html exposing (..)
+import Html.App as App
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Signal exposing (Address)
 
 
 -- Model
@@ -45,7 +45,7 @@ initialModel =
 -- UPDATE
 
 
-type Action
+type Msg
   = NoOp
   | ChangeVisibility String
   | UpdateEntryText String
@@ -53,9 +53,9 @@ type Action
   | Toggle Int
 
 
-update : Action -> Model -> Model
-update action model =
-  case action of
+update : Msg -> Model -> Model
+update msg model =
+  case msg of
     ChangeVisibility visibility ->
       { model | visibility = visibility }
 
@@ -89,33 +89,33 @@ update action model =
 -- VIEW
 
 
-view : Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   div
     []
-    [ todoEntry address model
-    , todoList address model
-    , footer address model
+    [ todoEntry model
+    , todoList model
+    , footer model
     ]
 
 
-todoEntry : Address Action -> Model -> Html
-todoEntry address model =
+todoEntry : Model -> Html Msg
+todoEntry model =
   div
     []
     [ input
-        [ on "input" targetValue (Signal.message address << UpdateEntryText)
+        [ onInput UpdateEntryText
         , value model.entryText
         ]
         []
     , button
-        [ onClick address Add ]
+        [ onClick Add ]
         [ text "Add" ]
     ]
 
 
-todoList : Address Action -> Model -> Html
-todoList address model =
+todoList : Model -> Html Msg
+todoList model =
   let
     tasks =
       case model.visibility of
@@ -130,11 +130,11 @@ todoList address model =
   in
     ul
       []
-      (List.map (todo address) tasks)
+      (List.map todo tasks)
 
 
-todo : Address Action -> Task -> Html
-todo address model =
+todo : Task -> Html Msg
+todo model =
   let
     textDecoration =
       if model.completed then
@@ -143,19 +143,19 @@ todo address model =
         "none"
   in
     li
-      [ onClick address (Toggle model.id)
+      [ onClick (Toggle model.id)
       , style [ ( "text-decoration", textDecoration ) ]
       ]
       [ text model.text ]
 
 
-footer : Address Action -> Model -> Html
-footer address model =
+footer : Model -> Html Msg
+footer model =
   let
     filterLink state =
       a
         [ href "#"
-        , onClick address (ChangeVisibility state)
+        , onClick (ChangeVisibility state)
         ]
         [ text state ]
   in
@@ -171,19 +171,12 @@ footer address model =
 
 
 
--- SIGNALS
+-- MAIN
 
-
-actions : Signal.Mailbox Action
-actions =
-  Signal.mailbox NoOp
-
-
-appModel : Signal Model
-appModel =
-  Signal.foldp update initialModel actions.signal
-
-
-main : Signal Html
+main : Program Never
 main =
-  Signal.map (view actions.address) appModel
+  App.beginnerProgram
+    { model = initialModel
+    , view = view
+    , update = update
+    }
